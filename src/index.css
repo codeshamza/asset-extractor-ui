@@ -15,9 +15,9 @@
   --border: #334155;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
   --transition: all 0.25s ease;
 }
 
@@ -127,10 +127,7 @@ body {
 }
 
 .upload-zone input[type="file"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
+  /* Hidden via JSX style={{ display: 'none' }} */
 }
 
 .upload-icon {
@@ -234,14 +231,16 @@ body {
 .extract-btn .spinner {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Download ZIP Button ────────────────────────────── */
@@ -365,28 +364,29 @@ body {
   background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
-.asset-card .download-overlay {
+/* ── Asset Hover Overlay (Preview + Download) ──────── */
+.asset-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   opacity: 0;
   transition: opacity 0.25s ease;
-  cursor: pointer;
 }
 
-.asset-card:hover .download-overlay {
+.asset-card:hover .asset-overlay {
   opacity: 1;
 }
 
-.asset-card .download-overlay button {
-  background: rgba(249, 115, 22, 0.9);
-  color: white;
+.overlay-btn {
   border: none;
   border-radius: var(--radius-sm);
-  padding: 10px 20px;
+  padding: 10px 24px;
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
@@ -394,9 +394,26 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 140px;
+  justify-content: center;
 }
 
-.asset-card .download-overlay button:hover {
+.preview-btn {
+  background: rgba(102, 126, 234, 0.9);
+  color: white;
+}
+
+.preview-btn:hover {
+  background: var(--accent-blue);
+  transform: scale(1.05);
+}
+
+.download-btn-overlay {
+  background: rgba(249, 115, 22, 0.9);
+  color: white;
+}
+
+.download-btn-overlay:hover {
   background: var(--accent-orange);
   transform: scale(1.05);
 }
@@ -405,12 +422,137 @@ body {
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   color: var(--text-secondary);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 600;
+  z-index: 2;
+}
+
+/* ── Fullscreen Preview Modal ──────────────────────── */
+.preview-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.preview-modal {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.preview-close {
+  position: absolute;
+  top: -40px;
+  right: -10px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.preview-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.preview-arrow {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1.2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.preview-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.preview-counter {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.preview-image {
+  max-width: 85vw;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  /* Checkerboard */
+  background-image:
+    linear-gradient(45deg, #222 25%, transparent 25%),
+    linear-gradient(-45deg, #222 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #222 75%),
+    linear-gradient(-45deg, transparent 75%, #222 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.preview-download-btn {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.preview-download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(249, 115, 22, 0.4);
 }
 
 /* ── Status Bar ─────────────────────────────────────── */
@@ -430,29 +572,18 @@ body {
   color: #22c55e;
 }
 
-/* ── Progress Bar ───────────────────────────────────── */
-.progress-wrapper {
-  width: 100%;
-  background: var(--bg-primary);
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 12px 0;
-  height: 6px;
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--accent-gradient);
-  border-radius: 6px;
-  transition: width 0.3s ease;
-}
-
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 900px) {
   .main-layout {
     grid-template-columns: 1fr;
   }
+
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .preview-image {
+    max-width: 95vw;
+    max-height: 60vh;
   }
 }

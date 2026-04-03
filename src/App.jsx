@@ -14,6 +14,7 @@ function App() {
   const [status, setStatus] = useState('')
   const [statusType, setStatusType] = useState('') // '', 'error', 'success'
   const [dragOver, setDragOver] = useState(false)
+  const [previewModal, setPreviewModal] = useState(null) // index of asset in fullscreen
   const fileInputRef = useRef(null)
 
   const handleFileSelect = useCallback((selectedFile) => {
@@ -32,6 +33,7 @@ function App() {
     setFileType(isPdf ? 'pdf' : 'image')
     setStatus('')
     setStatusType('')
+    setAssets([])
 
     if (isImage) {
       const reader = new FileReader()
@@ -49,12 +51,19 @@ function App() {
     handleFileSelect(droppedFile)
   }, [handleFileSelect])
 
+  // FIX: Only trigger file input from the zone click, not the input itself
+  const handleZoneClick = useCallback((e) => {
+    // Prevent double-trigger: if the click came from the input itself, ignore
+    if (e.target === fileInputRef.current) return
+    fileInputRef.current?.click()
+  }, [])
+
   const handleExtract = async () => {
     if (!file) return
 
     setLoading(true)
     setAssets([])
-    setStatus('🔍 Detecting visual elements...')
+    setStatus('🔍 Detecting visual elements... (may take 15-30s on CPU)')
     setStatusType('')
 
     try {
@@ -64,7 +73,7 @@ function App() {
 
       formData.append(fieldName, file)
       formData.append('bg_color', bgColor)
-      formData.append('tolerance', '30')
+      formData.append('tolerance', '45')
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
@@ -109,7 +118,6 @@ function App() {
     setStatusType('')
 
     try {
-      // Dynamic import to avoid bundling JSZip if not needed
       const JSZip = (await import('jszip')).default
       const { saveAs } = await import('file-saver')
 
@@ -158,13 +166,18 @@ function App() {
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleZoneClick}
             >
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,.pdf"
-                onChange={(e) => handleFileSelect(e.target.files[0])}
+                onChange={(e) => {
+                  handleFileSelect(e.target.files[0])
+                  // Reset input value so same file can be re-selected
+                  e.target.value = ''
+                }}
+                style={{ display: 'none' }}
               />
               {file ? (
                 <>
@@ -275,8 +288,21 @@ function App() {
                     alt={`Asset ${idx + 1}`}
                     loading="lazy"
                   />
-                  <div className="download-overlay" onClick={() => downloadAsset(b64, idx)}>
-                    <button>⬇ Download PNG</button>
+                  <div className="asset-overlay">
+                    <button
+                      className="overlay-btn preview-btn"
+                      onClick={() => setPreviewModal(idx)}
+                      title="Preview fullscreen"
+                    >
+                      🔍 Preview
+                    </button>
+                    <button
+                      className="overlay-btn download-btn-overlay"
+                      onClick={() => downloadAsset(b64, idx)}
+                      title="Download PNG"
+                    >
+                      ⬇ Download
+                    </button>
                   </div>
                 </div>
               ))
@@ -284,6 +310,45 @@ function App() {
           </div>
         </section>
       </div>
+
+      {/* Fullscreen Preview Modal */}
+      {previewModal !== null && (
+        <div className="preview-modal-backdrop" onClick={() => setPreviewModal(null)}>
+          <div className="preview-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="preview-close" onClick={() => setPreviewModal(null)}>✕</button>
+            <div className="preview-nav">
+              <button
+                className="preview-arrow"
+                disabled={previewModal === 0}
+                onClick={() => setPreviewModal(Math.max(0, previewModal - 1))}
+              >
+                ◀
+              </button>
+              <span className="preview-counter">
+                {previewModal + 1} / {assets.length}
+              </span>
+              <button
+                className="preview-arrow"
+                disabled={previewModal === assets.length - 1}
+                onClick={() => setPreviewModal(Math.min(assets.length - 1, previewModal + 1))}
+              >
+                ▶
+              </button>
+            </div>
+            <img
+              className="preview-image"
+              src={`data:image/png;base64,${assets[previewModal]}`}
+              alt={`Preview ${previewModal + 1}`}
+            />
+            <button
+              className="preview-download-btn"
+              onClick={() => downloadAsset(assets[previewModal], previewModal)}
+            >
+              ⬇ Download This Asset
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
